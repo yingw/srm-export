@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+# import regex as re
 import sys
 
 config_file = "./config.json"
@@ -17,6 +18,9 @@ if not os.path.exists(config_file):
 # load configs
 configs = json.load(open(config_file))
 target_dir = configs.get("TARGET_DIR", "./Imgs/")
+# if re.search(r'[^/\0:]', target_dir):
+#     print("Error!!! cannot contain special characters '\\0' or ':', {target_dir}")
+# sys.exit(1)
 img_type = configs.get("IMG_TYPE", "tall")  # support "tall", "hero", "long", "icon"
 img_suffix = configs.get("IMG_SUFFIX", "")  # or "-image", if you want file like: "Super Mario Bros. (USA) (Rev 1)-image.png
 
@@ -25,6 +29,7 @@ if len(sys.argv) > 1:
     json_file = sys.argv[1].strip()
 else:
     # if no command line argument, prompt user to input path
+    # json_file = "./_selections.json"
     json_file = input("Please input json file (or directory) path: ").strip()
 
 # if json file not exists, exit
@@ -45,18 +50,20 @@ if os.path.isdir(json_file):
         print(f"json file not exists: {json_file}")
         sys.exit(1)
 
-# json_file = "./_selections.json"
-# test_json = "/Users/yinguowei/Roms (tiny-best-set-go)/GB/srm-image-choices/_selections.json"
-
 source_dir = os.path.dirname(os.path.abspath(json_file))
-target_dir = os.path.normpath(os.path.join(source_dir, target_dir))
+# target_dir support relative path and absolute path
+if target_dir.startswith("./") or target_dir.startswith("../"):
+    target_dir = os.path.normpath(os.path.join(source_dir, target_dir))
+elif not os.path.isabs(target_dir):
+    target_dir = os.path.join(source_dir, target_dir)
+else:
+    target_dir = os.path.normpath(target_dir)
 
 if not os.path.exists(target_dir):
     os.makedirs(target_dir)
 elif os.listdir(target_dir):
     print(f"target dir is not empty, please check and clean it: {target_dir}")
     sys.exit(1)
-
 
 print(f"source dir: {source_dir}, target dir: {target_dir}")
 
@@ -65,7 +72,7 @@ count = 0
 with open(json_file) as f:
     data = json.load(f)
 
-    for item in data:
+    for index, item in enumerate(data):
         # get title and filename
         title = item.get("title")
         filename = item.get("images", {}).get(img_type, {}).get("filename", None)
@@ -91,10 +98,10 @@ with open(json_file) as f:
         # copy file
         try:
             shutil.copy2(source_file, target_file)
-            print(f"copied file: \"{filename}\", to: \"{target_filename}\"")
+            print(f"File {index + 1}: copied \"{filename}\" to \"{target_filename}\"")
             count += 1
         except Exception as e:
-            print(f"Error!!! when copying file: \"{filename}\", to: \"{target_filename}\": {e}")
+            print(f"Error!!! when copying file: \"{filename}\" to \"{target_filename}\": {e}")
             continue
 
     print(f"Done! Total copied files: {count}")
