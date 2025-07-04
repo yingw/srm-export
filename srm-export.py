@@ -1,107 +1,134 @@
 import json
 import os
 import shutil
-# import regex as re
 import sys
+import subprocess
 
 config_file = "./config.json"
 
-# if config file not exists, create default config json file
-if not os.path.exists(config_file):
-    configs = {
-        "TARGET_DIR": "./Imgs/",
-        "IMG_TYPE": "tall",
-        "IMG_SUFFIX": ""
-    }
-    json.dump(configs, open(config_file, "w"))
+default_configs = {
+    "TARGET_DIR": "./Imgs/",
+    "IMG_TYPE": "tall",
+    "IMG_SUFFIX": ""
+}
 
-# load configs
-configs = json.load(open(config_file))
-target_dir = configs.get("TARGET_DIR", "./Imgs/")
-# if re.search(r'[^/\0:]', target_dir):
-#     print("Error!!! cannot contain special characters '\\0' or ':', {target_dir}")
-# sys.exit(1)
-img_type = configs.get("IMG_TYPE", "tall")  # support "tall", "hero", "long", "icon"
-img_suffix = configs.get("IMG_SUFFIX", "")  # or "-image", if you want file like: "Super Mario Bros. (USA) (Rev 1)-image.png
 
-# get json file path from command line argument
-if len(sys.argv) > 1:
-    json_file = sys.argv[1].strip()
-else:
-    # if no command line argument, prompt user to input path
-    # json_file = "./_selections.json"
-    json_file = input("Please input json file (or directory) path: ").strip()
+def main():
+    """
+        Main function:
+        1. load configs
+        2. create target directory
+        3. copy images to target directory, with Title as filename
+        4. open target directory
+    """
+    # 0. init config, if config file not exists, create default config json file
+    if not os.path.exists(config_file):
+        json.dump(default_configs, open(config_file, "w"))
 
-# if json file not exists, exit
-if not os.path.exists(json_file):
-    print(f"Input file not exists: {json_file}")
-    sys.exit(1)
+    # 1. load configs from config file, command argument or user input
+    configs = json.load(open(config_file))
+    target_dir = configs.get("TARGET_DIR", "./Imgs/")
+    img_type = configs.get("IMG_TYPE", "tall")  # support "tall", "hero", "long", "logo", "icon"
+    img_suffix = configs.get("IMG_SUFFIX", "")  # or "-image", if you want filename to be: "Super Mario Bros. (USA) (Rev 1)-image.png
 
-# if input file is not `_selections.json`, exit
-if os.path.isfile(json_file) and os.path.basename(json_file) != "_selections.json":
-    print(f"json file must be `_selections.json`, selected: {json_file}")
-    sys.exit(1)
+    # get json file path from command line argument
+    if len(sys.argv) > 1:
+        json_file = sys.argv[1].strip()
+    else:
+        # if no command line argument, prompt user to input path
+        # json_file = "./_selections.json"
+        json_file = input("Please input json file (or directory) path: ").strip().strip("'").strip("\"")
 
-# if json file is a directory, find "_selections.json" file in it
-if os.path.isdir(json_file):
-    json_file = os.path.join(json_file, "_selections.json")
-    # if "_selections.json" not exists, exit
+    # if json file not exists, exit
     if not os.path.exists(json_file):
-        print(f"json file not exists: {json_file}")
+        print(f"Input file not exists: {json_file}")
         sys.exit(1)
 
-source_dir = os.path.dirname(os.path.abspath(json_file))
-# target_dir support relative path and absolute path
-if target_dir.startswith("./") or target_dir.startswith("../"):
-    target_dir = os.path.normpath(os.path.join(source_dir, target_dir))
-elif not os.path.isabs(target_dir):
-    target_dir = os.path.join(source_dir, target_dir)
-else:
-    target_dir = os.path.normpath(target_dir)
+    # if input file is not `_selections.json`, exit
+    if os.path.isfile(json_file) and os.path.basename(json_file) != "_selections.json":
+        print(f"json file must be `_selections.json`, selected: {json_file}")
+        sys.exit(1)
 
-if not os.path.exists(target_dir):
-    os.makedirs(target_dir)
-elif os.listdir(target_dir):
-    print(f"target dir is not empty, please check and clean it: {target_dir}")
-    sys.exit(1)
+    # if json file is a directory, find "_selections.json" file in it
+    if os.path.isdir(json_file):
+        json_file = os.path.join(json_file, "_selections.json")
+        if not os.path.exists(json_file):
+            print(f"json file not exists: {json_file}")
+            sys.exit(1)
 
-print(f"source dir: {source_dir}, target dir: {target_dir}")
+    source_dir = os.path.dirname(os.path.abspath(json_file))
+    # target_dir support relative path and absolute path
+    if target_dir.startswith("./") or target_dir.startswith("../"):
+        target_dir = os.path.normpath(os.path.join(source_dir, target_dir))
+    elif not os.path.isabs(target_dir):
+        target_dir = os.path.join(source_dir, target_dir)
+    else:
+        target_dir = os.path.normpath(target_dir)
 
-count = 0
+    # 2. create target directory
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+    elif os.listdir(target_dir):
+        print(f"target directory is not empty, please check and clean it: {target_dir}")
+        sys.exit(1)
 
-with open(json_file) as f:
-    data = json.load(f)
+    print(f"source dir: {source_dir}, target dir: {target_dir}")
 
-    for index, item in enumerate(data):
-        # get title and filename
-        title = item.get("title")
-        filename = item.get("images", {}).get(img_type, {}).get("filename", None)
-        if not filename:
-            continue
+    count = 0
 
-        # if source file not exists, skip
-        source_file = os.path.join(source_dir, filename)
-        if not os.path.exists(source_file):
-            print(f"Warning! Source file not exists: {source_file}")
-            continue
-        ext = os.path.splitext(filename)[1]
+    # 3. read json file and copy files
+    with open(json_file) as f:
+        data = json.load(f)
 
-        # set target file path and file name
-        target_filename = title + img_suffix + ext
-        target_file = os.path.join(target_dir, target_filename)
+        for index, item in enumerate(data):
+            # get title and filename
+            game_title = item.get("title")
+            image_filename = item.get("images", {}).get(img_type, {}).get("filename", None)
+            if not image_filename:
+                continue
 
-        # if target file already exists, skip
-        if os.path.exists(target_file):
-            print(f"Warning! Target file already exists: {target_file}")
-            continue
+            # if source image file does not exist, skip
+            source_file = os.path.join(source_dir, image_filename)
+            if not os.path.exists(source_file):
+                print(f"Warning! Source file not exists: {source_file}")
+                continue
+            image_file_ext = os.path.splitext(image_filename)[1]
 
-        # copy file
-        try:
-            shutil.copy2(source_file, target_file)
-            print(f"File {index + 1}: copied \"{filename}\" to \"{target_filename}\"")
-            count += 1
-        except Exception as e:
-            print(f"Error!!! when copying file: \"{filename}\" to \"{target_filename}\": {e}")
-            continue
+            # set target file path and file name
+            target_filename = game_title + img_suffix + image_file_ext
+            target_filepath = os.path.join(target_dir, target_filename)
+
+            # if target file already exists, skip
+            if os.path.exists(target_filepath):
+                print(f"Warning! Target file already exists: {target_filepath}")
+                continue
+
+            # copy file
+            try:
+                shutil.copy2(source_file, target_filepath)
+                print(f"File {index + 1}: copied \"{image_filename}\" to \"{target_filename}\"")
+                count += 1
+            except Exception as e:
+                print(f"Error!!! when copying file: \"{image_filename}\" to \"{target_filename}\": {e}")
+                continue
 
     print(f"Done! Total copied files: {count}")
+
+    # 4. All Done! try to open File Explorer (on Windows) or Finder (on MacOS) of the target directory
+    try:
+        if os.name == 'nt':
+            # Windows 下打开 文件管理器
+            os.startfile(target_dir)
+        elif os.name == 'posix':
+            # MacOS 和 Linux 下打开 文件管理器, Mac 下使用 open 命令, Linux 下使用 xdg-open 命令
+            subprocess.call(['open' if os.uname().sysname == 'Darwin' else 'xdg-open', target_dir])
+        else:
+            print(f"Unsupported OS: {os.name}")
+            return
+    except Exception as e:
+        print(f"Error when opening directory: {e}")
+        return
+
+
+if __name__ == "__main__":
+    main()
