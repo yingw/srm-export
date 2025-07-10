@@ -117,10 +117,10 @@ def main():
     # 4. All Done! try to open File Explorer (on Windows) or Finder (on MacOS) of the target directory
     try:
         if os.name == 'nt':
-            # Windows 下打开 文件管理器
+            # Windows
             os.startfile(target_dir)
         elif os.name == 'posix':
-            # MacOS 和 Linux 下打开 文件管理器, Mac 下使用 open 命令, Linux 下使用 xdg-open 命令
+            # MacOS, Linux
             subprocess.call(['open' if os.uname().sysname == 'Darwin' else 'xdg-open', target_dir])
         else:
             print(f"Unsupported OS: {os.name}")
