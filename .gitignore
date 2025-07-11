@@ -1,4 +1,4 @@
-_selections.json
+tests/**
 dist
 build
 *.spec
