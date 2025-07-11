@@ -1,0 +1,5 @@
+_selections.json
+dist
+build
+*.spec
+.DS_Store
