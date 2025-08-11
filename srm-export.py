@@ -83,7 +83,13 @@ def main():
         for index, item in enumerate(data):
             # get title and filename
             game_title = item.get("title")
-            image_filename = item.get("images", {}).get(img_type, {}).get("filename", None)
+            node_images = item.get("images", {})
+            if not node_images:
+                continue
+            node_image = node_images.get(img_type, {})
+            if not node_image:
+                continue
+            image_filename = node_image.get("filename", None)
             if not image_filename:
                 continue
 
@@ -94,7 +100,28 @@ def main():
                 continue
             image_file_ext = os.path.splitext(image_filename)[1]
 
+            # replace ": " to " - ", eg: "Cyberbots: Fullmetal Madness"
+            game_title = game_title.replace(" : ", " - ").replace(": ", " - ").replace(":", " - ")
+
             # set target file path and file name
+            # test if target filename is Arcade name and has multi names with " / "
+            if " / " in game_title:
+                # But sometime you will get name like: Contra (US / Asia, set 1), or: Aero Fighters (World / USA + Canada / Korea / Hong Kong / Taiwan) (newer hardware), it has to be ignored, and replace " / " with ", "
+
+                # and will support multi " / " to convert "A / B / C" to "A [B] [C].png"
+                ts = game_title.split(" / ")
+                # to determine if it's multi " / " for regions. Test if the count of "(" and ")" is equal
+                if ts[0].count("(") == ts[0].count(")"):
+                    game_title = ts[0]
+                    for t in ts[1:]:
+                        game_title += f" [{t}]"
+                else:
+                    # print(f"Warning! Multi \" / \" region detected: {game_title}, ignored.")
+                    game_title = game_title.replace(" / ", ", ")
+
+            #     print(f"get: {game_title}")
+            # continue
+
             target_filename = game_title + img_suffix + image_file_ext
             target_filepath = os.path.join(target_dir, target_filename)
 
@@ -130,5 +157,9 @@ def main():
         return
 
 
+# test
 if __name__ == "__main__":
+    test_file = r'/Users/yinguowei/Roms (tiny-best-set-go)/_TODO/NEOGEO/srm-image-choices1/_selections.json'
+    # test_file = r'/Users/yinguowei/Roms (tiny-best-set-go)/_TODO/ARCADE/srm-image-choices/_selections.json'
+    sys.argv.append(test_file)
     main()
