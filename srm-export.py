@@ -159,7 +159,9 @@ def main():
 
 # test
 if __name__ == "__main__":
-    test_file = r'/Users/yinguowei/Roms (tiny-best-set-go)/_TODO/NEOGEO/srm-image-choices1/_selections.json'
-    # test_file = r'/Users/yinguowei/Roms (tiny-best-set-go)/_TODO/ARCADE/srm-image-choices/_selections.json'
+    # test_file = r'/Users/yinguowei/Roms (tiny-best-set-go)/_TODO/NEOGEO/srm-image-choices1/_selections.json'
+    # test_file = r'/Users/yinguowei/Roms (tiny-best-set-go)/_TODO/ARCADE/srm-image-choices v1/_selections.json'
+    # test_file = r'/Users/yinguowei/Roms (tiny-best-set-go)/tiny-best-set-go-imgs-SGDB-onion/2. 64gb & 128gb expansion/SEGACD/srm-image-choices/_selections.json'
+    test_file = r'/Users/yinguowei/Roms (tiny-best-set-go)/tiny-best-set-go-imgs-SGDB-onion/2. 64gb & 128gb expansion/PCECD/srm-image-choices/_selections.json'
     sys.argv.append(test_file)
     main()
